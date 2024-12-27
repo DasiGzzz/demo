@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn đặt hàng</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr.completed {
+            text-decoration: line-through;
+            color: grey;
+            background-color: #f9f9f9; /* Add a background color to indicate completion */
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Đơn đặt hàng</h1>
+    <table id="data-table">
+        <thead>
+            <tr>
+                <th>Thời gian đặt</th>
+                <th>Tên khách hàng</th>
+                <th>Số điện thoại</th>
+                <th>Hình thức giao</th>
+                <th>Địa chỉ</th>
+                <th>Loại bánh</th>
+                <th>Ghi chú</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be loaded here -->
+        </tbody>
+    </table>
+
+    <script>
+        let orders = [];
+        let completedOrders = [];
+    
+        function loadData() {
+            const url = 'https://script.google.com/macros/s/AKfycbyeVYJtTtaVhDjixJjP7kK8TL6UdkjOy-GjNefLjwXiOiesNbmMWaqGx9m2GR4e2zdr/exec';
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    orders = data;
+                    updateTable();
+                })
+                .catch(error => console.error("Error fetching data:", error));
+        }
+    
+        function updateTable() {
+            const tableBody = document.querySelector("#data-table tbody");
+            tableBody.innerHTML = "";
+    
+            // Separate completed and incomplete orders
+            const incompleteOrders = orders.filter(order => order["Status"] !== 1);
+            const completedOrders = orders.filter(order => order["Status"] === 1);
+    
+            // Sort the incomplete orders by "Dấu thời gian" (time) in ascending order
+            incompleteOrders.sort((a, b) => new Date(a["Dấu thời gian"]) - new Date(b["Dấu thời gian"]));
+    
+            // Add incomplete orders to the table
+            incompleteOrders.forEach(row => {
+                const tr = document.createElement("tr");
+    
+                Object.entries(row).forEach(([key, cell]) => {
+                    if (key !== "Status") {
+                        const td = document.createElement("td");
+                        td.textContent = cell;
+                        tr.appendChild(td);
+                    }
+                });
+    
+                const td = document.createElement("td");
+                const button = document.createElement("button");
+                button.textContent = "Hoàn thành";
+                button.id = row["Dấu thời gian"];
+                button.addEventListener("click", () => {
+                    markComplete(row["Dấu thời gian"]);
+                });
+                td.appendChild(button);
+                tr.appendChild(td);
+    
+                // Insert the row in the table
+                tableBody.appendChild(tr);
+            });
+    
+            // Add completed orders to the table (with strike-through and grey background)
+            completedOrders.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.classList.add("completed");
+    
+                Object.entries(row).forEach(([key, cell]) => {
+                    if (key !== "Status") {
+                        const td = document.createElement("td");
+                        td.textContent = cell;
+                        tr.appendChild(td);
+                    }
+                });
+    
+                const td = document.createElement("td");
+                const button = document.createElement("button");
+                button.textContent = "Hoàn thành";
+                button.disabled = true; // Disable the button for completed orders
+                td.appendChild(button);
+                tr.appendChild(td);
+    
+                // Append completed orders to the end of the table
+                tableBody.appendChild(tr);
+            });
+        }
+    
+        function markComplete(orderId) {
+            console.log("Marking order as complete:", orderId);
+
+            fetch('https://script.google.com/macros/s/AKfycbwHIinlJH2ZhO9ORgGQmlNC0TVPkrTFVXxpebdIq5OoCqou-jvZBiquwv8Sy-ibwAgb/exec', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain'
+                },
+                body: orderId
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                loadData();  // Reload data after marking an order as complete
+            })
+            .catch(error => console.error('Error:', error.message || error))
+            .finally(() => {
+                console.log('Completed marking order as complete:', orderId);
+            });
+        }
+    
+        setInterval(loadData, 5000); // Refresh every 5 seconds
+        loadData(); // Initial load
+    </script>
+    
+</body>
+</html>
